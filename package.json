@@ -1,0 +1,30 @@
+{
+  "name": "itglue-mcp",
+  "version": "0.1.0",
+  "description": "IT Glue MCP server with full read + write support (JSON:API, multi-region).",
+  "type": "module",
+  "bin": {
+    "itglue-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc || echo 'prepare: tsc skipped'",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}

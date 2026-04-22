@@ -70,6 +70,12 @@ web_modules/
 .env.*
 !.env.example
 
+# Local tool/agent metadata
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -80,7 +86,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# NOTE: dist/ is intentionally committed so `npx -y github:...` works without a build step.
+# dist
 
 # Gatsby files
 .cache/
