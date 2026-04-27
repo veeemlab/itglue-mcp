@@ -10,7 +10,7 @@ Add it to any MCP client's config (example for MCPHub's `mcp_settings.json`):
 {
   "itglue": {
     "command": "npx",
-    "args": ["-y", "github:USER/REPO"],
+    "args": ["-y", "github:veeemlab/itglue-mcp"],
     "env": {
       "ITGLUE_API_KEY": "${ITGLUE_API_KEY}",
       "ITGLUE_REGION": "${ITGLUE_REGION}"
@@ -19,7 +19,7 @@ Add it to any MCP client's config (example for MCPHub's `mcp_settings.json`):
 }
 ```
 
-Replace `USER/REPO` with the GitHub slug this repository is published under. The first run downloads the repo into npx's cache; subsequent runs are instant.
+The first run downloads the repo into npx's cache; subsequent runs are instant.
 
 ## Environment
 
@@ -61,7 +61,7 @@ All tools share the `itglue_` prefix. Read-only tools accept `pageSize` / `pageN
 
 ## Why `dist/` is committed
 
-`npx -y github:USER/REPO` runs the package straight from GitHub without a build step. So the compiled output under `dist/` is intentionally tracked in git. A `prepare` script (`tsc`) regenerates it as a fallback if the package is ever installed from source.
+`npx -y github:veeemlab/itglue-mcp` runs the package straight from GitHub without a build step. So the compiled output under `dist/` is intentionally tracked in git. A `prepare` script (`tsc`) regenerates it as a fallback if the package is ever installed from source.
 
 ## Local development
 

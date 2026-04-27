@@ -1,5 +1,5 @@
 {
-  "name": "itglue-mcp",
+  "name": "@veeemlab/itglue-mcp",
   "version": "0.1.0",
   "description": "IT Glue MCP server with full read + write support (JSON:API, multi-region).",
   "type": "module",
@@ -14,8 +14,31 @@
   "scripts": {
     "build": "tsc",
     "prepare": "tsc || echo 'prepare: tsc skipped'",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "itglue",
+    "kaseya",
+    "msp",
+    "claude",
+    "it-documentation"
+  ],
+  "author": "Vitalii Morgunov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/veeemlab/itglue-mcp.git"
+  },
+  "homepage": "https://github.com/veeemlab/itglue-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/veeemlab/itglue-mcp/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
