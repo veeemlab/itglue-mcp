@@ -4,11 +4,19 @@ const REGION_HOSTS: Record<string, string> = {
   au: "https://api.au.itglue.com",
 };
 
+const DEFAULT_MIN_INTERVAL_MS = 100;
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_BASE_BACKOFF_MS = 1000;
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
 export interface ClientConfig {
   apiKey: string;
   region: string;
   baseUrl?: string;
   userAgent?: string;
+  minIntervalMs?: number;
+  maxRetries?: number;
+  baseBackoffMs?: number;
 }
 
 export interface JsonApiResource {
@@ -41,6 +49,11 @@ export class ITGlueClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly userAgent: string;
+  private readonly minIntervalMs: number;
+  private readonly maxRetries: number;
+  private readonly baseBackoffMs: number;
+  private queueTail: Promise<unknown> = Promise.resolve();
+  private lastSentAt = 0;
 
   constructor(config: ClientConfig) {
     if (!config.apiKey) {
@@ -56,6 +69,22 @@ export class ITGlueClient {
     this.apiKey = config.apiKey;
     this.baseUrl = host.replace(/\/+$/, "");
     this.userAgent = config.userAgent || "itglue-mcp/0.1";
+    this.minIntervalMs = config.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS;
+    this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+    this.baseBackoffMs = config.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS;
+  }
+
+  private enqueueFetch(url: string, init: RequestInit): Promise<Response> {
+    const prev = this.queueTail;
+    const run = (async () => {
+      await prev.catch(() => {});
+      const wait = Math.max(0, this.lastSentAt + this.minIntervalMs - Date.now());
+      if (wait > 0) await sleep(wait);
+      this.lastSentAt = Date.now();
+      return fetch(url, init);
+    })();
+    this.queueTail = run.catch(() => {});
+    return run;
   }
 
   private buildUrl(path: string, query?: Record<string, unknown>): string {
@@ -91,21 +120,28 @@ export class ITGlueClient {
       headers["Content-Type"] = "application/vnd.api+json";
       body = JSON.stringify(opts.body);
     }
-    const response = await fetch(url, { method, headers, body });
-    const text = await response.text();
-    let parsed: unknown = undefined;
-    if (text.length > 0) {
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = text;
+    let attempt = 0;
+    for (;;) {
+      const response = await this.enqueueFetch(url, { method, headers, body });
+      const text = await response.text();
+      let parsed: unknown = undefined;
+      if (text.length > 0) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = text;
+        }
       }
-    }
-    if (!response.ok) {
+      if (response.ok) return parsed as T;
+      if (attempt < this.maxRetries && RETRYABLE_STATUSES.has(response.status)) {
+        const delay = computeBackoff(response, attempt, this.baseBackoffMs);
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
       const message = extractErrorMessage(parsed, response.status, response.statusText);
       throw new ITGlueApiError(message, response.status, parsed);
     }
-    return parsed as T;
   }
 
   get<T = JsonApiDocument>(path: string, query?: Record<string, unknown>): Promise<T> {
@@ -127,6 +163,24 @@ export class ITGlueClient {
   get baseHost(): string {
     return this.baseUrl;
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function computeBackoff(response: Response, attempt: number, base: number): number {
+  const ra = response.headers.get("retry-after");
+  if (ra) {
+    const seconds = Number(ra);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+    const dateMs = Date.parse(ra);
+    if (Number.isFinite(dateMs)) {
+      const diff = dateMs - Date.now();
+      if (diff > 0) return diff;
+    }
+  }
+  return base * Math.pow(2, attempt);
 }
 
 function extractErrorMessage(body: unknown, status: number, statusText: string): string {

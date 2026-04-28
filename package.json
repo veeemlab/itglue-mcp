@@ -4,7 +4,7 @@
   "description": "IT Glue MCP server with full read + write support (JSON:API, multi-region).",
   "type": "module",
   "bin": {
-    "itglue-mcp": "./dist/index.js"
+    "itglue-mcp": "dist/index.js"
   },
   "files": [
     "dist",
