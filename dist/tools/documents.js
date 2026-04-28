@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function documentResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -56,6 +56,7 @@ export const documentTools = [
                 organizationId: { type: "string", description: "filter[organization_id]" },
                 documentFolderId: { type: "string", description: "filter[document_folder_id]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -76,6 +77,7 @@ export const documentTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Document id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,
@@ -116,6 +118,7 @@ export const documentTools = [
             properties: {
                 documentId: { type: "string", description: "Document id (required)." },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             required: ["documentId"],
             additionalProperties: false,

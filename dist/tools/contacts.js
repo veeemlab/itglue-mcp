@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function contactResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -76,6 +76,7 @@ export const contactTools = [
                 important: { type: "boolean", description: "filter[important]" },
                 primaryEmail: { type: "string", description: "filter[primary_email]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -99,6 +100,7 @@ export const contactTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Contact id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,

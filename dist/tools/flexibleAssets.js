@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function flexibleAssetResource(args, id) {
     const attributes = {};
     if (args.organizationId !== undefined && args.organizationId !== "") {
@@ -32,6 +32,7 @@ export const flexibleAssetTools = [
                 name: { type: "string", description: "filter[name]" },
                 enabled: { type: "boolean", description: "filter[enabled]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -52,6 +53,7 @@ export const flexibleAssetTools = [
             properties: {
                 flexibleAssetTypeId: { type: "string", description: "Flexible asset type id (required)." },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             required: ["flexibleAssetTypeId"],
             additionalProperties: false,
@@ -75,6 +77,7 @@ export const flexibleAssetTools = [
                 name: { type: "string", description: "filter[name]" },
                 organizationId: { type: "string", description: "filter[organization_id]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             required: ["flexibleAssetTypeId"],
             additionalProperties: false,
@@ -97,6 +100,7 @@ export const flexibleAssetTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Flexible asset id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,

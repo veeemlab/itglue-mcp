@@ -4,6 +4,7 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  formatOptionsSchema,
   paginationSchema,
   pickPagination,
   requireId,
@@ -90,6 +91,7 @@ export const contactTools: ToolDefinition[] = [
         important: { type: "boolean", description: "filter[important]" },
         primaryEmail: { type: "string", description: "filter[primary_email]" },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },
@@ -113,6 +115,7 @@ export const contactTools: ToolDefinition[] = [
       type: "object",
       properties: {
         id: { type: "string", description: "Contact id." },
+        ...formatOptionsSchema(),
       },
       required: ["id"],
       additionalProperties: false,

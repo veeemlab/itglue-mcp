@@ -1,6 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { ITGlueClient } from "./client.js";
+import { applyFormat, pickFormatOptions } from "./format.js";
 import { allTools, errorResult, textResult, } from "./tools/index.js";
 export function buildServer(opts) {
     const client = new ITGlueClient({ apiKey: opts.apiKey, region: opts.region });
@@ -27,7 +28,8 @@ export function buildServer(opts) {
         const args = (req.params.arguments ?? {});
         try {
             const result = await tool.handler(args, { client });
-            return textResult(result);
+            const formatted = applyFormat(result, pickFormatOptions(args));
+            return textResult(formatted);
         }
         catch (err) {
             return errorResult(err);

@@ -1,3 +1,4 @@
+export { formatOptionsSchema } from "../format.js";
 export function textResult(payload) {
     const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
     return {

@@ -1,3 +1,4 @@
+import { LruCache, resourceFromPath, ttlForResource } from "./cache.js";
 const REGION_HOSTS = {
     us: "https://api.itglue.com",
     eu: "https://api.eu.itglue.com",
@@ -6,6 +7,7 @@ const REGION_HOSTS = {
 const DEFAULT_MIN_INTERVAL_MS = 100;
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_BACKOFF_MS = 1000;
+const DEFAULT_CACHE_MAX_ENTRIES = 500;
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 export class ITGlueApiError extends Error {
     status;
@@ -24,6 +26,8 @@ export class ITGlueClient {
     minIntervalMs;
     maxRetries;
     baseBackoffMs;
+    cacheEnabled;
+    cache;
     queueTail = Promise.resolve();
     lastSentAt = 0;
     constructor(config) {
@@ -41,6 +45,8 @@ export class ITGlueClient {
         this.minIntervalMs = config.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS;
         this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.baseBackoffMs = config.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS;
+        this.cacheEnabled = config.cacheEnabled ?? true;
+        this.cache = new LruCache(config.cacheMaxEntries ?? DEFAULT_CACHE_MAX_ENTRIES);
     }
     enqueueFetch(url, init) {
         const prev = this.queueTail;
@@ -73,6 +79,13 @@ export class ITGlueClient {
     }
     async request(method, path, opts = {}) {
         const url = this.buildUrl(path, opts.query);
+        const resource = resourceFromPath(path);
+        const cacheKey = method === "GET" ? `GET ${url}` : null;
+        if (cacheKey && this.cacheEnabled) {
+            const hit = this.cache.get(cacheKey);
+            if (hit !== undefined)
+                return hit;
+        }
         const headers = {
             "x-api-key": this.apiKey,
             Accept: "application/vnd.api+json",
@@ -96,8 +109,18 @@ export class ITGlueClient {
                     parsed = text;
                 }
             }
-            if (response.ok)
+            if (response.ok) {
+                if (cacheKey && this.cacheEnabled) {
+                    const ttl = ttlForResource(resource);
+                    if (ttl > 0)
+                        this.cache.set(cacheKey, parsed, ttl);
+                }
+                else if (method !== "GET" && this.cacheEnabled && resource) {
+                    const segment = `/${resource}`;
+                    this.cache.invalidateMatching((key) => key.includes(segment));
+                }
                 return parsed;
+            }
             if (attempt < this.maxRetries && RETRYABLE_STATUSES.has(response.status)) {
                 const delay = computeBackoff(response, attempt, this.baseBackoffMs);
                 await sleep(delay);

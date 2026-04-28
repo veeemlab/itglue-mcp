@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function locationResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -50,6 +50,7 @@ export const locationTools = [
                 city: { type: "string", description: "filter[city]" },
                 country: { type: "string", description: "filter[country]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -74,6 +75,7 @@ export const locationTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Location id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,

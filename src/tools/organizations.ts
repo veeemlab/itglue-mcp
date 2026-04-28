@@ -4,6 +4,7 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  formatOptionsSchema,
   paginationSchema,
   pickPagination,
   requireId,
@@ -33,6 +34,7 @@ export const organizationTools: ToolDefinition[] = [
           description: "filter[psa_integration_type] (e.g. manually, connectwise-rest, autotask).",
         },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },
@@ -54,6 +56,7 @@ export const organizationTools: ToolDefinition[] = [
       type: "object",
       properties: {
         id: { type: "string", description: "Organization id." },
+        ...formatOptionsSchema(),
       },
       required: ["id"],
       additionalProperties: false,

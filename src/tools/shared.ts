@@ -1,5 +1,7 @@
 import type { ITGlueClient } from "../client.js";
 
+export { formatOptionsSchema } from "../format.js";
+
 export interface ToolContext {
   client: ITGlueClient;
 }

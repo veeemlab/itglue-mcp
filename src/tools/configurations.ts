@@ -4,6 +4,7 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  formatOptionsSchema,
   paginationSchema,
   pickPagination,
   requireId,
@@ -73,6 +74,7 @@ export const configurationTools: ToolDefinition[] = [
         rmmId: { type: "string", description: "filter[rmm_id]" },
         archived: { type: "boolean", description: "filter[archived]" },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },
@@ -98,6 +100,7 @@ export const configurationTools: ToolDefinition[] = [
       type: "object",
       properties: {
         id: { type: "string", description: "Configuration id." },
+        ...formatOptionsSchema(),
       },
       required: ["id"],
       additionalProperties: false,
@@ -213,6 +216,7 @@ export const configurationTools: ToolDefinition[] = [
       properties: {
         name: { type: "string", description: "filter[name]" },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },
@@ -232,6 +236,7 @@ export const configurationTools: ToolDefinition[] = [
       properties: {
         name: { type: "string", description: "filter[name]" },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },

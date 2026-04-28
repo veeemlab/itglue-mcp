@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function configurationResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -64,6 +64,7 @@ export const configurationTools = [
                 rmmId: { type: "string", description: "filter[rmm_id]" },
                 archived: { type: "boolean", description: "filter[archived]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -89,6 +90,7 @@ export const configurationTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Configuration id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,
@@ -202,6 +204,7 @@ export const configurationTools = [
             properties: {
                 name: { type: "string", description: "filter[name]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -218,6 +221,7 @@ export const configurationTools = [
             properties: {
                 name: { type: "string", description: "filter[name]" },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },

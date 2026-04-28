@@ -4,6 +4,7 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  formatOptionsSchema,
   paginationSchema,
   pickPagination,
   requireId,
@@ -61,6 +62,7 @@ export const locationTools: ToolDefinition[] = [
         city: { type: "string", description: "filter[city]" },
         country: { type: "string", description: "filter[country]" },
         ...paginationSchema(),
+        ...formatOptionsSchema(),
       },
       additionalProperties: false,
     },
@@ -85,6 +87,7 @@ export const locationTools: ToolDefinition[] = [
       type: "object",
       properties: {
         id: { type: "string", description: "Location id." },
+        ...formatOptionsSchema(),
       },
       required: ["id"],
       additionalProperties: false,

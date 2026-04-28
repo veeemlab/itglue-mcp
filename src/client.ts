@@ -1,3 +1,5 @@
+import { LruCache, resourceFromPath, ttlForResource } from "./cache.js";
+
 const REGION_HOSTS: Record<string, string> = {
   us: "https://api.itglue.com",
   eu: "https://api.eu.itglue.com",
@@ -7,6 +9,7 @@ const REGION_HOSTS: Record<string, string> = {
 const DEFAULT_MIN_INTERVAL_MS = 100;
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_BACKOFF_MS = 1000;
+const DEFAULT_CACHE_MAX_ENTRIES = 500;
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 export interface ClientConfig {
@@ -17,6 +20,8 @@ export interface ClientConfig {
   minIntervalMs?: number;
   maxRetries?: number;
   baseBackoffMs?: number;
+  cacheEnabled?: boolean;
+  cacheMaxEntries?: number;
 }
 
 export interface JsonApiResource {
@@ -52,6 +57,8 @@ export class ITGlueClient {
   private readonly minIntervalMs: number;
   private readonly maxRetries: number;
   private readonly baseBackoffMs: number;
+  private readonly cacheEnabled: boolean;
+  private readonly cache: LruCache;
   private queueTail: Promise<unknown> = Promise.resolve();
   private lastSentAt = 0;
 
@@ -72,6 +79,8 @@ export class ITGlueClient {
     this.minIntervalMs = config.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS;
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.baseBackoffMs = config.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS;
+    this.cacheEnabled = config.cacheEnabled ?? true;
+    this.cache = new LruCache(config.cacheMaxEntries ?? DEFAULT_CACHE_MAX_ENTRIES);
   }
 
   private enqueueFetch(url: string, init: RequestInit): Promise<Response> {
@@ -110,6 +119,14 @@ export class ITGlueClient {
     opts: { query?: Record<string, unknown>; body?: unknown } = {},
   ): Promise<T> {
     const url = this.buildUrl(path, opts.query);
+    const resource = resourceFromPath(path);
+    const cacheKey = method === "GET" ? `GET ${url}` : null;
+
+    if (cacheKey && this.cacheEnabled) {
+      const hit = this.cache.get(cacheKey);
+      if (hit !== undefined) return hit as T;
+    }
+
     const headers: Record<string, string> = {
       "x-api-key": this.apiKey,
       Accept: "application/vnd.api+json",
@@ -132,7 +149,16 @@ export class ITGlueClient {
           parsed = text;
         }
       }
-      if (response.ok) return parsed as T;
+      if (response.ok) {
+        if (cacheKey && this.cacheEnabled) {
+          const ttl = ttlForResource(resource);
+          if (ttl > 0) this.cache.set(cacheKey, parsed, ttl);
+        } else if (method !== "GET" && this.cacheEnabled && resource) {
+          const segment = `/${resource}`;
+          this.cache.invalidateMatching((key) => key.includes(segment));
+        }
+        return parsed as T;
+      }
       if (attempt < this.maxRetries && RETRYABLE_STATUSES.has(response.status)) {
         const delay = computeBackoff(response, attempt, this.baseBackoffMs);
         await sleep(delay);

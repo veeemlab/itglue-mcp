@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, toStrOrUndef, } from "./shared.js";
 export const organizationTools = [
     {
         name: "itglue_search_organizations",
@@ -21,6 +21,7 @@ export const organizationTools = [
                     description: "filter[psa_integration_type] (e.g. manually, connectwise-rest, autotask).",
                 },
                 ...paginationSchema(),
+                ...formatOptionsSchema(),
             },
             additionalProperties: false,
         },
@@ -42,6 +43,7 @@ export const organizationTools = [
             type: "object",
             properties: {
                 id: { type: "string", description: "Organization id." },
+                ...formatOptionsSchema(),
             },
             required: ["id"],
             additionalProperties: false,
