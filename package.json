@@ -1,6 +1,6 @@
 {
   "name": "@veeemlab/itglue-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IT Glue MCP server with full read + write support (JSON:API, multi-region).",
   "type": "module",
   "bin": {
