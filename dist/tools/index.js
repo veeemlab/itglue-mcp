@@ -1,3 +1,4 @@
+import { bulkTools } from "./bulk.js";
 import { configurationTools } from "./configurations.js";
 import { contactTools } from "./contacts.js";
 import { documentTools } from "./documents.js";
@@ -14,6 +15,7 @@ export const allTools = [
     ...flexibleAssetTools,
     ...contactTools,
     ...locationTools,
+    ...bulkTools,
     ...healthTools,
 ];
 export { errorResult, textResult } from "./shared.js";
