@@ -1,6 +1,9 @@
-# itglue-mcp
+# @veeemlab/itglue-mcp
 
-A Model Context Protocol (MCP) server for [IT Glue](https://www.itglue.com/) with full **read + write** support. Talks JSON:API to `api.itglue.com` / `api.eu.itglue.com` / `api.au.itglue.com`, exposes 40+ tools to any MCP-compatible client (Claude Desktop, Claude Code, MCPHub, etc.), and runs directly from GitHub via `npx` — no clone, no `npm install`, no build step.
+[![npm version](https://img.shields.io/npm/v/@veeemlab/itglue-mcp.svg)](https://www.npmjs.com/package/@veeemlab/itglue-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A Model Context Protocol (MCP) server for [IT Glue](https://www.itglue.com/) with full **read + write** support. Talks JSON:API to `api.itglue.com` / `api.eu.itglue.com` / `api.au.itglue.com` and exposes 40+ tools to any MCP-compatible client (Claude Desktop, Claude Code, MCPHub, etc.). Built-in rate limiting and retry-with-backoff keep you safely under IT Glue's 3000 req / 5min ceiling.
 
 ## Quick start
 
@@ -10,7 +13,7 @@ Add it to any MCP client's config (example for MCPHub's `mcp_settings.json`):
 {
   "itglue": {
     "command": "npx",
-    "args": ["-y", "github:veeemlab/itglue-mcp"],
+    "args": ["-y", "@veeemlab/itglue-mcp"],
     "env": {
       "ITGLUE_API_KEY": "${ITGLUE_API_KEY}",
       "ITGLUE_REGION": "${ITGLUE_REGION}"
@@ -19,7 +22,15 @@ Add it to any MCP client's config (example for MCPHub's `mcp_settings.json`):
 }
 ```
 
-The first run downloads the repo into npx's cache; subsequent runs are instant.
+`npx` resolves the latest published version from npm and caches it; subsequent runs are instant.
+
+### Alternative: run from GitHub HEAD
+
+If you want the bleeding-edge `main` branch without waiting for an npm release:
+
+```json
+"args": ["-y", "github:veeemlab/itglue-mcp"]
+```
 
 ## Environment
 
@@ -58,6 +69,10 @@ All tools share the `itglue_` prefix. Read-only tools accept `pageSize` / `pageN
 - `GET` / `POST` / `PATCH` / `DELETE` map cleanly to IT Glue's CRUD verbs
 - Errors from the API are parsed and surfaced as `isError: true` tool responses with the original `errors[]` payload
 - Transport defaults to `StdioServerTransport`; opt into `StreamableHTTPServerTransport` with `ITGLUE_TRANSPORT=http`
+
+### Rate limiting & retry
+
+Every outbound request goes through a serialized queue with a configurable minimum interval (100 ms by default → ~10 req/s, comfortably under IT Glue's 3000 / 5 min limit). Responses with status 408 / 429 / 500 / 502 / 503 / 504 are retried up to 3 times with exponential backoff (1 s, 2 s, 4 s); the `Retry-After` header is honored in both numeric-seconds and HTTP-date forms.
 
 ## Why `dist/` is committed
 
