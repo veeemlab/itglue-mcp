@@ -1,4 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
+import { searchWithNameFallback } from "../searchFallback.js";
 import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function configurationResource(args, id) {
     const attributes = {};
@@ -51,11 +52,11 @@ function configurationResource(args, id) {
 export const configurationTools = [
     {
         name: "itglue_search_configurations",
-        description: "Search IT Glue configurations with optional filters and pagination.",
+        description: "Search IT Glue configurations. IT Glue's filter[name] is a case-sensitive substring match — not fuzzy. On a 0-hit response, the tool auto-retries with first-word and diacritic-stripped variants and reports which strategy worked via meta.search_strategy. For fuzzy lookup with confidence scoring (and serial/asset-tag exact-match boosting), use itglue_find_config_match.",
         inputSchema: {
             type: "object",
             properties: {
-                name: { type: "string", description: "filter[name]" },
+                name: { type: "string", description: "filter[name] — case-sensitive substring (IT Glue limitation; tool falls back to first-word and diacritic-stripped variants on miss)." },
                 organizationId: { type: "string", description: "filter[organization_id]" },
                 configurationTypeId: { type: "string", description: "filter[configuration_type_id]" },
                 configurationStatusId: { type: "string", description: "filter[configuration_status_id]" },
@@ -69,18 +70,21 @@ export const configurationTools = [
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
-            const filters = buildFilters({
-                name: toStrOrUndef(args.name),
-                organization_id: toStrOrUndef(args.organizationId),
-                configuration_type_id: toStrOrUndef(args.configurationTypeId),
-                configuration_status_id: toStrOrUndef(args.configurationStatusId),
-                serial_number: toStrOrUndef(args.serialNumber),
-                asset_tag: toStrOrUndef(args.assetTag),
-                rmm_id: toStrOrUndef(args.rmmId),
-                archived: args.archived === undefined ? undefined : Boolean(args.archived),
+            const inputName = toStrOrUndef(args.name);
+            return searchWithNameFallback(inputName, async (variant) => {
+                const filters = buildFilters({
+                    name: variant,
+                    organization_id: toStrOrUndef(args.organizationId),
+                    configuration_type_id: toStrOrUndef(args.configurationTypeId),
+                    configuration_status_id: toStrOrUndef(args.configurationStatusId),
+                    serial_number: toStrOrUndef(args.serialNumber),
+                    asset_tag: toStrOrUndef(args.assetTag),
+                    rmm_id: toStrOrUndef(args.rmmId),
+                    archived: args.archived === undefined ? undefined : Boolean(args.archived),
+                });
+                const query = mergeQuery(filters, buildPagination(pickPagination(args)));
+                return client.get("/configurations", query);
             });
-            const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-            return client.get("/configurations", query);
         },
     },
     {

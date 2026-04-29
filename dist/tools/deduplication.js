@@ -1,4 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
+import { searchWithNameFallback } from "../searchFallback.js";
 import { classifyConfidence, normalize, similarity } from "../similarity.js";
 import { requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 const SCAN_RESOURCE_TYPES = [
@@ -66,13 +67,14 @@ export const deduplicationTools = [
             const name = requireString(args, "name");
             const threshold = typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
             const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-            const firstWord = normalize(name).split(" ")[0] ?? name;
-            const filters = buildFilters({
-                name: firstWord,
-                organization_type_id: toStrOrUndef(args.organizationTypeId),
+            const result = await searchWithNameFallback(name, async (variant) => {
+                const filters = buildFilters({
+                    name: variant,
+                    organization_type_id: toStrOrUndef(args.organizationTypeId),
+                });
+                const query = mergeQuery(filters, buildPagination({ pageSize }));
+                return client.get("/organizations", query);
             });
-            const query = mergeQuery(filters, buildPagination({ pageSize }));
-            const result = await client.get("/organizations", query);
             const candidates = arrayData(result);
             const matches = candidates
                 .map((r) => {
@@ -90,6 +92,7 @@ export const deduplicationTools = [
             return {
                 input: { name, organizationTypeId: args.organizationTypeId },
                 candidatesScanned: candidates.length,
+                searchStrategy: result.meta?.search_strategy,
                 matches,
             };
         },
@@ -132,12 +135,14 @@ export const deduplicationTools = [
             const primaryEmail = toStrOrUndef(args.primaryEmail);
             const threshold = typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
             const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-            const filters = buildFilters({
-                first_name: firstName,
-                organization_id: toStrOrUndef(args.organizationId),
+            const result = await searchWithNameFallback(firstName, async (variant) => {
+                const filters = buildFilters({
+                    first_name: variant,
+                    organization_id: toStrOrUndef(args.organizationId),
+                });
+                const query = mergeQuery(filters, buildPagination({ pageSize }));
+                return client.get("/contacts", query);
             });
-            const query = mergeQuery(filters, buildPagination({ pageSize }));
-            const result = await client.get("/contacts", query);
             const candidates = arrayData(result);
             const inputFull = `${firstName} ${lastName}`.trim();
             const normalizedInputEmail = primaryEmail ? normalize(primaryEmail) : "";
@@ -166,6 +171,7 @@ export const deduplicationTools = [
             return {
                 input: { firstName, lastName, organizationId: args.organizationId, primaryEmail },
                 candidatesScanned: candidates.length,
+                searchStrategy: result.meta?.search_strategy,
                 matches,
             };
         },
@@ -211,13 +217,14 @@ export const deduplicationTools = [
             const assetTag = toStrOrUndef(args.assetTag);
             const threshold = typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
             const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-            const firstWord = normalize(name).split(" ")[0] ?? name;
-            const filters = buildFilters({
-                name: firstWord,
-                organization_id: toStrOrUndef(args.organizationId),
+            const result = await searchWithNameFallback(name, async (variant) => {
+                const filters = buildFilters({
+                    name: variant,
+                    organization_id: toStrOrUndef(args.organizationId),
+                });
+                const query = mergeQuery(filters, buildPagination({ pageSize }));
+                return client.get("/configurations", query);
             });
-            const query = mergeQuery(filters, buildPagination({ pageSize }));
-            const result = await client.get("/configurations", query);
             const candidates = arrayData(result);
             const normSerial = serialNumber ? normalize(serialNumber) : "";
             const normAsset = assetTag ? normalize(assetTag) : "";
@@ -247,6 +254,7 @@ export const deduplicationTools = [
             return {
                 input: { name, organizationId: args.organizationId, serialNumber, assetTag },
                 candidatesScanned: candidates.length,
+                searchStrategy: result.meta?.search_strategy,
                 matches,
             };
         },

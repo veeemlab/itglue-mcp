@@ -3,6 +3,7 @@ import {
   buildPagination,
   mergeQuery,
 } from "../client.js";
+import { searchWithNameFallback } from "../searchFallback.js";
 import {
   formatOptionsSchema,
   paginationSchema,
@@ -57,11 +58,12 @@ function sectionResource(args: Record<string, unknown>, id?: string) {
 export const documentTools: ToolDefinition[] = [
   {
     name: "itglue_search_documents",
-    description: "Search documents across organizations.",
+    description:
+      "Search IT Glue documents. IT Glue's filter[name] is a case-sensitive substring match — not fuzzy. On a 0-hit response, the tool auto-retries with first-word and diacritic-stripped variants and reports which strategy worked via meta.search_strategy.",
     inputSchema: {
       type: "object",
       properties: {
-        name: { type: "string", description: "filter[name]" },
+        name: { type: "string", description: "filter[name] — case-sensitive substring (IT Glue limitation; tool falls back to first-word and diacritic-stripped variants on miss)." },
         organizationId: { type: "string", description: "filter[organization_id]" },
         documentFolderId: { type: "string", description: "filter[document_folder_id]" },
         ...paginationSchema(),
@@ -70,13 +72,16 @@ export const documentTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
-      const filters = buildFilters({
-        name: toStrOrUndef(args.name),
-        organization_id: toStrOrUndef(args.organizationId),
-        document_folder_id: toStrOrUndef(args.documentFolderId),
+      const inputName = toStrOrUndef(args.name);
+      return searchWithNameFallback(inputName, async (variant) => {
+        const filters = buildFilters({
+          name: variant,
+          organization_id: toStrOrUndef(args.organizationId),
+          document_folder_id: toStrOrUndef(args.documentFolderId),
+        });
+        const query = mergeQuery(filters, buildPagination(pickPagination(args)));
+        return client.get("/documents", query);
       });
-      const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-      return client.get("/documents", query);
     },
   },
   {

@@ -5,6 +5,7 @@ import {
   type JsonApiResource,
   mergeQuery,
 } from "../client.js";
+import { searchWithNameFallback } from "../searchFallback.js";
 import { classifyConfidence, normalize, similarity } from "../similarity.js";
 import {
   requireString,
@@ -87,16 +88,14 @@ export const deduplicationTools: ToolDefinition[] = [
       const threshold =
         typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
       const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-      const firstWord = normalize(name).split(" ")[0] ?? name;
-      const filters = buildFilters({
-        name: firstWord,
-        organization_type_id: toStrOrUndef(args.organizationTypeId),
+      const result = await searchWithNameFallback(name, async (variant) => {
+        const filters = buildFilters({
+          name: variant,
+          organization_type_id: toStrOrUndef(args.organizationTypeId),
+        });
+        const query = mergeQuery(filters, buildPagination({ pageSize }));
+        return client.get<JsonApiDocument<JsonApiResource[]>>("/organizations", query);
       });
-      const query = mergeQuery(filters, buildPagination({ pageSize }));
-      const result = await client.get<JsonApiDocument<JsonApiResource[]>>(
-        "/organizations",
-        query,
-      );
 
       const candidates = arrayData(result);
       const matches = candidates
@@ -116,6 +115,7 @@ export const deduplicationTools: ToolDefinition[] = [
       return {
         input: { name, organizationTypeId: args.organizationTypeId },
         candidatesScanned: candidates.length,
+        searchStrategy: result.meta?.search_strategy,
         matches,
       };
     },
@@ -160,15 +160,14 @@ export const deduplicationTools: ToolDefinition[] = [
       const threshold =
         typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
       const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-      const filters = buildFilters({
-        first_name: firstName,
-        organization_id: toStrOrUndef(args.organizationId),
+      const result = await searchWithNameFallback(firstName, async (variant) => {
+        const filters = buildFilters({
+          first_name: variant,
+          organization_id: toStrOrUndef(args.organizationId),
+        });
+        const query = mergeQuery(filters, buildPagination({ pageSize }));
+        return client.get<JsonApiDocument<JsonApiResource[]>>("/contacts", query);
       });
-      const query = mergeQuery(filters, buildPagination({ pageSize }));
-      const result = await client.get<JsonApiDocument<JsonApiResource[]>>(
-        "/contacts",
-        query,
-      );
 
       const candidates = arrayData(result);
       const inputFull = `${firstName} ${lastName}`.trim();
@@ -201,6 +200,7 @@ export const deduplicationTools: ToolDefinition[] = [
       return {
         input: { firstName, lastName, organizationId: args.organizationId, primaryEmail },
         candidatesScanned: candidates.length,
+        searchStrategy: result.meta?.search_strategy,
         matches,
       };
     },
@@ -248,16 +248,14 @@ export const deduplicationTools: ToolDefinition[] = [
       const threshold =
         typeof args.threshold === "number" ? args.threshold : DEFAULT_FIND_THRESHOLD;
       const pageSize = toIntOrUndef(args.pageSize) ?? DEFAULT_FIND_POOL;
-      const firstWord = normalize(name).split(" ")[0] ?? name;
-      const filters = buildFilters({
-        name: firstWord,
-        organization_id: toStrOrUndef(args.organizationId),
+      const result = await searchWithNameFallback(name, async (variant) => {
+        const filters = buildFilters({
+          name: variant,
+          organization_id: toStrOrUndef(args.organizationId),
+        });
+        const query = mergeQuery(filters, buildPagination({ pageSize }));
+        return client.get<JsonApiDocument<JsonApiResource[]>>("/configurations", query);
       });
-      const query = mergeQuery(filters, buildPagination({ pageSize }));
-      const result = await client.get<JsonApiDocument<JsonApiResource[]>>(
-        "/configurations",
-        query,
-      );
 
       const candidates = arrayData(result);
       const normSerial = serialNumber ? normalize(serialNumber) : "";
@@ -292,6 +290,7 @@ export const deduplicationTools: ToolDefinition[] = [
       return {
         input: { name, organizationId: args.organizationId, serialNumber, assetTag },
         candidatesScanned: candidates.length,
+        searchStrategy: result.meta?.search_strategy,
         matches,
       };
     },

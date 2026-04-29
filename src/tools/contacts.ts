@@ -3,6 +3,7 @@ import {
   buildPagination,
   mergeQuery,
 } from "../client.js";
+import { searchWithNameFallback } from "../searchFallback.js";
 import {
   formatOptionsSchema,
   paginationSchema,
@@ -80,11 +81,12 @@ const contactPhoneSchema = {
 export const contactTools: ToolDefinition[] = [
   {
     name: "itglue_search_contacts",
-    description: "Search contacts with optional filters and pagination.",
+    description:
+      "Search IT Glue contacts. IT Glue's filter[first_name] is a case-sensitive substring match — not fuzzy. On a 0-hit response, the tool auto-retries with diacritic-stripped variants and reports which strategy worked via meta.search_strategy. For fuzzy lookup with email exact-match boosting, use itglue_find_contact_match.",
     inputSchema: {
       type: "object",
       properties: {
-        firstName: { type: "string", description: "filter[first_name]" },
+        firstName: { type: "string", description: "filter[first_name] — case-sensitive substring (IT Glue limitation; tool falls back to diacritic-stripped variants on miss)." },
         lastName: { type: "string", description: "filter[last_name]" },
         organizationId: { type: "string", description: "filter[organization_id]" },
         contactTypeId: { type: "string", description: "filter[contact_type_id]" },
@@ -96,16 +98,19 @@ export const contactTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
-      const filters = buildFilters({
-        first_name: toStrOrUndef(args.firstName),
-        last_name: toStrOrUndef(args.lastName),
-        organization_id: toStrOrUndef(args.organizationId),
-        contact_type_id: toStrOrUndef(args.contactTypeId),
-        important: args.important === undefined ? undefined : Boolean(args.important),
-        primary_email: toStrOrUndef(args.primaryEmail),
+      const inputName = toStrOrUndef(args.firstName);
+      return searchWithNameFallback(inputName, async (variant) => {
+        const filters = buildFilters({
+          first_name: variant,
+          last_name: toStrOrUndef(args.lastName),
+          organization_id: toStrOrUndef(args.organizationId),
+          contact_type_id: toStrOrUndef(args.contactTypeId),
+          important: args.important === undefined ? undefined : Boolean(args.important),
+          primary_email: toStrOrUndef(args.primaryEmail),
+        });
+        const query = mergeQuery(filters, buildPagination(pickPagination(args)));
+        return client.get("/contacts", query);
       });
-      const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-      return client.get("/contacts", query);
     },
   },
   {
