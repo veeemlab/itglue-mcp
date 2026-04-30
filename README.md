@@ -1,7 +1,9 @@
 # @veeemlab/itglue-mcp
 
-[![npm version](https://img.shields.io/npm/v/@veeemlab/itglue-mcp.svg)](https://www.npmjs.com/package/@veeemlab/itglue-mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/veeemlab/itglue-mcp/release.yml?style=for-the-badge&label=CI&logo=github)](https://github.com/veeemlab/itglue-mcp/actions/workflows/release.yml)
+[![npm version](https://img.shields.io/npm/v/@veeemlab/itglue-mcp?style=for-the-badge&color=blue&label=npm)](https://www.npmjs.com/package/@veeemlab/itglue-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/@veeemlab/itglue-mcp?style=for-the-badge&color=blue&label=downloads)](https://www.npmjs.com/package/@veeemlab/itglue-mcp)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow?style=for-the-badge)](LICENSE)
 
 A Model Context Protocol (MCP) server for [IT Glue](https://www.itglue.com/) with full **read + write** support. Talks JSON:API to `api.itglue.com` / `api.eu.itglue.com` / `api.au.itglue.com` and exposes 40+ tools to any MCP-compatible client (Claude Desktop, Claude Code, MCPHub, etc.). Built-in rate limiting and retry-with-backoff keep you safely under IT Glue's 3000 req / 5min ceiling.
 
