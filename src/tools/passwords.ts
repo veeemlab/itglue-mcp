@@ -8,6 +8,7 @@ import {
   pickPagination,
   requireId,
   requireString,
+  toBoolOrUndef,
   toIntOrUndef,
   toStrOrUndef,
   type ToolDefinition,
@@ -19,8 +20,10 @@ function passwordResource(args: Record<string, unknown>, id?: string) {
     const v = args[src];
     if (v === undefined || v === null || v === "") return;
     if (kind === "int") attributes[dst] = toIntOrUndef(v);
-    else if (kind === "bool") attributes[dst] = Boolean(v);
-    else attributes[dst] = String(v);
+    else if (kind === "bool") {
+      const b = toBoolOrUndef(v);
+      if (b !== undefined) attributes[dst] = b;
+    } else attributes[dst] = String(v);
   };
   assign("name", "name");
   assign("username", "username");

@@ -9,6 +9,7 @@ import {
   pickPagination,
   requireId,
   requireString,
+  toBoolOrUndef,
   toIntOrUndef,
   toStrOrUndef,
   type ToolDefinition,
@@ -53,7 +54,7 @@ export const flexibleAssetTools: ToolDefinition[] = [
     handler: async (args, { client }) => {
       const filters = buildFilters({
         name: toStrOrUndef(args.name),
-        enabled: args.enabled === undefined ? undefined : Boolean(args.enabled),
+        enabled: toBoolOrUndef(args.enabled),
       });
       const query = mergeQuery(filters, buildPagination(pickPagination(args)));
       return client.get("/flexible_asset_types", query);

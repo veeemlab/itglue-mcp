@@ -10,6 +10,7 @@ import {
   pickPagination,
   requireId,
   requireString,
+  toBoolOrUndef,
   toIntOrUndef,
   toStrOrUndef,
   type ToolDefinition,
@@ -46,7 +47,10 @@ function configurationResource(args: Record<string, unknown>, id?: string) {
   assign("operatingSystemNotes", "operating-system-notes");
   assign("locationId", "location-id", "int");
   assign("contactId", "contact-id", "int");
-  if (args.archived !== undefined) attributes.archived = Boolean(args.archived);
+  {
+    const archived = toBoolOrUndef(args.archived);
+    if (archived !== undefined) attributes.archived = archived;
+  }
 
   if (Object.keys(attributes).length === 0) {
     throw new Error("No configuration attributes provided.");
@@ -91,7 +95,7 @@ export const configurationTools: ToolDefinition[] = [
           serial_number: toStrOrUndef(args.serialNumber),
           asset_tag: toStrOrUndef(args.assetTag),
           rmm_id: toStrOrUndef(args.rmmId),
-          archived: args.archived === undefined ? undefined : Boolean(args.archived),
+          archived: toBoolOrUndef(args.archived),
         });
         const query = mergeQuery(filters, buildPagination(pickPagination(args)));
         return client.get("/configurations", query);

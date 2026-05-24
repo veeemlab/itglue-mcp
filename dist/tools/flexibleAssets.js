@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function flexibleAssetResource(args, id) {
     const attributes = {};
     if (args.organizationId !== undefined && args.organizationId !== "") {
@@ -39,7 +39,7 @@ export const flexibleAssetTools = [
         handler: async (args, { client }) => {
             const filters = buildFilters({
                 name: toStrOrUndef(args.name),
-                enabled: args.enabled === undefined ? undefined : Boolean(args.enabled),
+                enabled: toBoolOrUndef(args.enabled),
             });
             const query = mergeQuery(filters, buildPagination(pickPagination(args)));
             return client.get("/flexible_asset_types", query);

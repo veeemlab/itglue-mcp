@@ -50,6 +50,24 @@ export function toStrOrUndef(v) {
     const s = String(v);
     return s.length > 0 ? s : undefined;
 }
+export function toBoolOrUndef(v) {
+    if (v === true || v === false)
+        return v;
+    if (typeof v === "string") {
+        const lower = v.trim().toLowerCase();
+        if (lower === "true" || lower === "1" || lower === "yes")
+            return true;
+        if (lower === "false" || lower === "0" || lower === "no" || lower === "")
+            return false;
+    }
+    if (typeof v === "number") {
+        if (v === 1)
+            return true;
+        if (v === 0)
+            return false;
+    }
+    return undefined;
+}
 export function requireString(args, key) {
     const v = args[key];
     if (v === undefined || v === null || v === "") {

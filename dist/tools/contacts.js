@@ -1,6 +1,6 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
 import { searchWithNameFallback } from "../searchFallback.js";
-import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function contactResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -9,8 +9,11 @@ function contactResource(args, id) {
             return;
         if (kind === "int")
             attributes[dst] = toIntOrUndef(v);
-        else if (kind === "bool")
-            attributes[dst] = Boolean(v);
+        else if (kind === "bool") {
+            const b = toBoolOrUndef(v);
+            if (b !== undefined)
+                attributes[dst] = b;
+        }
         else
             attributes[dst] = String(v);
     };
@@ -89,7 +92,7 @@ export const contactTools = [
                     last_name: toStrOrUndef(args.lastName),
                     organization_id: toStrOrUndef(args.organizationId),
                     contact_type_id: toStrOrUndef(args.contactTypeId),
-                    important: args.important === undefined ? undefined : Boolean(args.important),
+                    important: toBoolOrUndef(args.important),
                     primary_email: toStrOrUndef(args.primaryEmail),
                 });
                 const query = mergeQuery(filters, buildPagination(pickPagination(args)));

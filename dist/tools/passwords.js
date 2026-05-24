@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { paginationSchema, pickPagination, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function passwordResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -8,8 +8,11 @@ function passwordResource(args, id) {
             return;
         if (kind === "int")
             attributes[dst] = toIntOrUndef(v);
-        else if (kind === "bool")
-            attributes[dst] = Boolean(v);
+        else if (kind === "bool") {
+            const b = toBoolOrUndef(v);
+            if (b !== undefined)
+                attributes[dst] = b;
+        }
         else
             attributes[dst] = String(v);
     };

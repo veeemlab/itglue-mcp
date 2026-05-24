@@ -10,6 +10,7 @@ import {
   pickPagination,
   requireId,
   requireString,
+  toBoolOrUndef,
   toIntOrUndef,
   toStrOrUndef,
   type ToolDefinition,
@@ -21,8 +22,10 @@ function contactResource(args: Record<string, unknown>, id?: string) {
     const v = args[src];
     if (v === undefined || v === null || v === "") return;
     if (kind === "int") attributes[dst] = toIntOrUndef(v);
-    else if (kind === "bool") attributes[dst] = Boolean(v);
-    else attributes[dst] = String(v);
+    else if (kind === "bool") {
+      const b = toBoolOrUndef(v);
+      if (b !== undefined) attributes[dst] = b;
+    } else attributes[dst] = String(v);
   };
   assign("firstName", "first-name");
   assign("lastName", "last-name");
@@ -105,7 +108,7 @@ export const contactTools: ToolDefinition[] = [
           last_name: toStrOrUndef(args.lastName),
           organization_id: toStrOrUndef(args.organizationId),
           contact_type_id: toStrOrUndef(args.contactTypeId),
-          important: args.important === undefined ? undefined : Boolean(args.important),
+          important: toBoolOrUndef(args.important),
           primary_email: toStrOrUndef(args.primaryEmail),
         });
         const query = mergeQuery(filters, buildPagination(pickPagination(args)));
