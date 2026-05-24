@@ -5,7 +5,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@veeemlab/itglue-mcp?color=blue)](https://www.npmjs.com/package/@veeemlab/itglue-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A Model Context Protocol (MCP) server for [IT Glue](https://www.itglue.com/) with full **read + write** support. Talks JSON:API to `api.itglue.com` / `api.eu.itglue.com` / `api.au.itglue.com` and exposes 40+ tools to any MCP-compatible client (Claude Desktop, Claude Code, MCPHub, etc.). Built-in rate limiting and retry-with-backoff keep you safely under IT Glue's 3000 req / 5min ceiling.
+A Model Context Protocol (MCP) server for [IT Glue](https://www.itglue.com/) with full **read + write** support. Talks JSON:API to `api.itglue.com` / `api.eu.itglue.com` / `api.au.itglue.com` and exposes **56 tools** to any MCP-compatible client (Claude Desktop, Claude Code, MCPHub, etc.). Built-in rate limiting and retry-with-backoff keep you safely under IT Glue's 3000 req / 5min ceiling. Destructive operations require explicit confirm tokens; password reveal requires a separate acknowledgement; the HTTP transport requires a bearer token and binds to loopback by default.
 
 ## Quick start
 
@@ -40,7 +40,10 @@ If you want the bleeding-edge `main` branch without waiting for an npm release:
 | --- | --- | --- | --- |
 | `ITGLUE_API_KEY` | yes | – | Sent as the `x-api-key` header. |
 | `ITGLUE_REGION` | no | `us` | One of `us`, `eu`, `au`. |
+| `ITGLUE_READ_ONLY` | no | `false` | Set to `true` to skip registration of all 25 mutating tools (create/update/delete/bulk/publish). |
 | `ITGLUE_TRANSPORT` | no | stdio | Set to `http` to expose the server over Streamable HTTP on `:PORT/mcp` (with `/health` for liveness). |
+| `ITGLUE_HTTP_TOKEN` | when `http` | – | Bearer token required on `/mcp` requests. Must be ≥ 16 chars; server refuses to start without it. |
+| `ITGLUE_HTTP_HOST` | no | `127.0.0.1` | Only used when `ITGLUE_TRANSPORT=http`. Loopback by default — set explicitly (`0.0.0.0` etc.) to expose. |
 | `PORT` | no | `3000` | Only used when `ITGLUE_TRANSPORT=http`. |
 
 ## Tools
@@ -63,7 +66,23 @@ All tools share the `itglue_` prefix. Read-only tools accept `pageSize` / `pageN
 
 **Locations** — `list_locations`, `get_location`, `create_location`, `update_location`, `delete_location`
 
+**Users** — `list_users`, `get_user`
+
+**Groups** — `list_groups`, `get_group`
+
+**Attachments** — `list_attachments`, `delete_attachment`
+
+**Related Items** — `list_related_items`, `create_related_item`, `delete_related_item`
+
+**Bulk** — `bulk_update`, `bulk_delete` (one tool per operation across resource types)
+
+**Deduplication** — `find_org_match`, `find_contact_match`, `find_config_match`, `scan_duplicates`
+
 **Health** — `itglue_health_check`
+
+### Token-saving `formatOptions`
+
+Every read tool accepts an optional `formatOptions` argument: `format: "compact"` keeps id + a small set of identifying attributes, `fields: [...]` whitelists specific attribute keys, `omitEmpty: true` drops null and empty values. Combine to reduce response tokens by up to 80%.
 
 ## How it works
 
@@ -74,7 +93,23 @@ All tools share the `itglue_` prefix. Read-only tools accept `pageSize` / `pageN
 
 ### Rate limiting & retry
 
-Every outbound request goes through a serialized queue with a configurable minimum interval (100 ms by default → ~10 req/s, comfortably under IT Glue's 3000 / 5 min limit). Responses with status 408 / 429 / 500 / 502 / 503 / 504 are retried up to 3 times with exponential backoff (1 s, 2 s, 4 s); the `Retry-After` header is honored in both numeric-seconds and HTTP-date forms.
+Every outbound request goes through a serialized queue with a configurable minimum interval (100 ms by default → ~10 req/s, comfortably under IT Glue's 3000 / 5 min limit). 429 responses are retried up to 3 times with exponential backoff (1 s, 2 s, 4 s) and honor the `Retry-After` header. 408 and 5xx responses are retried **only for GET and DELETE** — POST and PATCH surface the error to the caller, since retrying them risks duplicate side effects.
+
+### LRU response cache
+
+GET responses are kept in an in-memory LRU cache with per-resource TTLs (1 hour for reference data, 5 minutes for organizations/locations, 1 minute for configurations/contacts/documents/flexible-assets, **never** for passwords). Successful write operations invalidate every cache entry for the touched resource.
+
+## Security
+
+This server can read, modify, and delete IT Glue records — including passwords. Guards built in:
+
+- **`ITGLUE_READ_ONLY=true`** disables registration of all 25 mutating tools; `listTools` never advertises them. The intended posture for handing an LLM an inspection-only view.
+- **Confirm tokens** are required on every destructive tool. Each tool refuses to run unless the caller passes a verbatim `confirm` value matching the operation: `DELETE_CONFIGURATION`, `DELETE_CONTACT`, `DELETE_DOCUMENT_SECTION`, `DELETE_FLEXIBLE_ASSET`, `DELETE_LOCATION`, `DELETE_ATTACHMENT`, `DELETE_RELATED_ITEM`, `DELETE_PASSWORD`, `PUBLISH_DOCUMENT`, `BULK_UPDATE`, `BULK_DELETE`.
+- **`showPassword=true`** on `get_password` / `search_passwords` is conditionally gated: passing it without `confirm: "SHOW_PASSWORD"` is refused. The plaintext path stays available but cannot be hit by accident.
+- **Error response redaction**: API error bodies pass through a redactor that masks values whose key matches `/password|secret|token|api_key|otp|private_key/i`. IT Glue sometimes echoes back submitted fields on validation failure — the redactor catches that before the LLM sees them.
+- **HTTP transport**: requires `ITGLUE_HTTP_TOKEN` (≥ 16 chars) and binds to `127.0.0.1` by default. `/mcp` requests must carry `Authorization: Bearer <token>`; token comparison uses `timingSafeEqual`. `/health` is unauthenticated for liveness probes.
+
+Passwords are **never cached** regardless of TTL settings.
 
 ## Why `dist/` is committed
 
@@ -92,9 +127,14 @@ Project layout:
 
 ```
 src/
-  index.ts            # stdio entry (+ optional HTTP)
-  server.ts           # MCP server wiring
-  client.ts           # IT Glue HTTP + JSON:API client
+  index.ts            # stdio entry (+ optional HTTP with bearer auth)
+  server.ts           # MCP server wiring + read-only filter
+  client.ts           # IT Glue HTTP client (throttle, retry, cache)
+  cache.ts            # LRU cache + per-resource TTL table
+  format.ts           # formatOptions transform
+  redact.ts           # secret-key redaction for error responses
+  searchFallback.ts   # diacritic / first-word variants for filter[name]
+  similarity.ts       # Jaro-Winkler + normalize for dedup tools
   tools/
     organizations.ts
     configurations.ts
@@ -103,8 +143,14 @@ src/
     flexibleAssets.ts
     contacts.ts
     locations.ts
+    users.ts
+    groups.ts
+    attachments.ts
+    relatedItems.ts
+    bulk.ts
+    deduplication.ts
     health.ts
-    shared.ts         # tool helpers (schemas, errors, pagination)
+    shared.ts         # tool helpers (schemas, errors, pagination, confirm)
     index.ts          # tool registry
 ```
 
