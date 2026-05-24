@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { formatOptionsSchema, paginationSchema, pickPagination, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { confirmSchema, formatOptionsSchema, paginationSchema, pickPagination, requireConfirm, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function locationResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -152,16 +152,18 @@ export const locationTools = [
     },
     {
         name: "itglue_delete_location",
-        description: "Delete a location by id.",
+        description: 'Delete a location by id. Destructive — requires confirm: "DELETE_LOCATION".',
         inputSchema: {
             type: "object",
             properties: {
                 id: { type: "string", description: "Location id." },
+                ...confirmSchema("DELETE_LOCATION"),
             },
-            required: ["id"],
+            required: ["id", "confirm"],
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
+            requireConfirm(args, "DELETE_LOCATION");
             const id = requireId(args);
             return client.delete(`/locations/${encodeURIComponent(id)}`);
         },

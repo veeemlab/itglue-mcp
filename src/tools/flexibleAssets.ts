@@ -4,9 +4,11 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   toBoolOrUndef,
@@ -187,16 +189,19 @@ export const flexibleAssetTools: ToolDefinition[] = [
   },
   {
     name: "itglue_delete_flexible_asset",
-    description: "Delete a flexible asset by id.",
+    description:
+      'Delete a flexible asset by id. Destructive — requires confirm: "DELETE_FLEXIBLE_ASSET".',
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: "Flexible asset id." },
+        ...confirmSchema("DELETE_FLEXIBLE_ASSET"),
       },
-      required: ["id"],
+      required: ["id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_FLEXIBLE_ASSET");
       const id = requireId(args);
       return client.delete(`/flexible_assets/${encodeURIComponent(id)}`);
     },

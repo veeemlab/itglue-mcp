@@ -5,9 +5,11 @@ import {
 } from "../client.js";
 import { searchWithNameFallback } from "../searchFallback.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   toBoolOrUndef,
@@ -203,16 +205,19 @@ export const configurationTools: ToolDefinition[] = [
   },
   {
     name: "itglue_delete_configuration",
-    description: "Delete a configuration by id.",
+    description:
+      'Delete a configuration by id. Destructive — requires confirm: "DELETE_CONFIGURATION".',
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: "Configuration id." },
+        ...confirmSchema("DELETE_CONFIGURATION"),
       },
-      required: ["id"],
+      required: ["id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_CONFIGURATION");
       const id = requireId(args);
       return client.delete(`/configurations/${encodeURIComponent(id)}`);
     },

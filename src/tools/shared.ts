@@ -100,3 +100,22 @@ export function requireString(args: Record<string, unknown>, key: string): strin
 export function requireId(args: Record<string, unknown>, key = "id"): string {
   return requireString(args, key);
 }
+
+export function confirmSchema(expectedToken: string) {
+  return {
+    confirm: {
+      type: "string",
+      enum: [expectedToken],
+      description: `Required safety token. Pass "${expectedToken}" verbatim to acknowledge this destructive operation. Without it the call is refused.`,
+    },
+  } as const;
+}
+
+export function requireConfirm(args: Record<string, unknown>, expectedToken: string): void {
+  if (args.confirm !== expectedToken) {
+    throw new Error(
+      `This operation is destructive and requires explicit acknowledgement. ` +
+        `Re-send the call with confirm: "${expectedToken}".`,
+    );
+  }
+}

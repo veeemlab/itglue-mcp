@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { paginationSchema, pickPagination, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
+import { confirmSchema, paginationSchema, pickPagination, requireConfirm, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function passwordResource(args, id) {
     const attributes = {};
     const assign = (src, dst, kind = "str") => {
@@ -51,13 +51,20 @@ export const passwordTools = [
                 cachedResourceName: { type: "string", description: "filter[cached_resource_name]" },
                 showPassword: {
                     type: "boolean",
-                    description: "If true, include the plaintext password field (show_password=true).",
+                    description: "If true, include the plaintext password field (show_password=true). Requires confirm: \"SHOW_PASSWORD\".",
+                },
+                confirm: {
+                    type: "string",
+                    enum: ["SHOW_PASSWORD"],
+                    description: 'Required when showPassword=true. Pass "SHOW_PASSWORD" verbatim.',
                 },
                 ...paginationSchema(),
             },
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
+            if (args.showPassword === true)
+                requireConfirm(args, "SHOW_PASSWORD");
             const filters = buildFilters({
                 name: toStrOrUndef(args.name),
                 organization_id: toStrOrUndef(args.organizationId),
@@ -73,18 +80,28 @@ export const passwordTools = [
     },
     {
         name: "itglue_get_password",
-        description: "Fetch one password. Pass showPassword=true to include the plaintext password value.",
+        description: "Fetch one password. Pass showPassword=true to include the plaintext password value (requires confirm).",
         inputSchema: {
             type: "object",
             properties: {
                 id: { type: "string", description: "Password id." },
-                showPassword: { type: "boolean", description: "Include plaintext (show_password=true)." },
+                showPassword: {
+                    type: "boolean",
+                    description: "Include plaintext (show_password=true). Requires confirm: \"SHOW_PASSWORD\".",
+                },
+                confirm: {
+                    type: "string",
+                    enum: ["SHOW_PASSWORD"],
+                    description: 'Required when showPassword=true. Pass "SHOW_PASSWORD" verbatim.',
+                },
             },
             required: ["id"],
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
             const id = requireId(args);
+            if (args.showPassword === true)
+                requireConfirm(args, "SHOW_PASSWORD");
             const query = {};
             if (args.showPassword === true)
                 query.show_password = "true";
@@ -160,16 +177,18 @@ export const passwordTools = [
     },
     {
         name: "itglue_delete_password",
-        description: "Delete a password entry by id.",
+        description: 'Delete a password entry by id. Destructive — requires confirm: "DELETE_PASSWORD".',
         inputSchema: {
             type: "object",
             properties: {
                 id: { type: "string", description: "Password id." },
+                ...confirmSchema("DELETE_PASSWORD"),
             },
-            required: ["id"],
+            required: ["id", "confirm"],
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
+            requireConfirm(args, "DELETE_PASSWORD");
             const id = requireId(args);
             return client.delete(`/passwords/${encodeURIComponent(id)}`);
         },

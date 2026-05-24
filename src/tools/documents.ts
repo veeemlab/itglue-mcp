@@ -5,9 +5,11 @@ import {
 } from "../client.js";
 import { searchWithNameFallback } from "../searchFallback.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   toBoolOrUndef,
@@ -202,17 +204,20 @@ export const documentTools: ToolDefinition[] = [
   },
   {
     name: "itglue_delete_document_section",
-    description: "Delete a document section.",
+    description:
+      'Delete a document section. Destructive — requires confirm: "DELETE_DOCUMENT_SECTION".',
     inputSchema: {
       type: "object",
       properties: {
         documentId: { type: "string", description: "Document id (required)." },
         id: { type: "string", description: "Section id (required)." },
+        ...confirmSchema("DELETE_DOCUMENT_SECTION"),
       },
-      required: ["documentId", "id"],
+      required: ["documentId", "id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_DOCUMENT_SECTION");
       const documentId = requireString(args, "documentId");
       const id = requireId(args);
       return client.delete(
@@ -222,16 +227,19 @@ export const documentTools: ToolDefinition[] = [
   },
   {
     name: "itglue_publish_document",
-    description: "Publish a document (makes the latest draft visible).",
+    description:
+      'Publish a document (makes the latest draft visible). Destructive — requires confirm: "PUBLISH_DOCUMENT".',
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: "Document id." },
+        ...confirmSchema("PUBLISH_DOCUMENT"),
       },
-      required: ["id"],
+      required: ["id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "PUBLISH_DOCUMENT");
       const id = requireId(args);
       return client.post(`/documents/${encodeURIComponent(id)}/publish`, {});
     },

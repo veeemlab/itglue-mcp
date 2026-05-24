@@ -1,3 +1,4 @@
+import { confirmSchema, requireConfirm } from "./shared.js";
 const BULK_RESOURCE_TYPES = [
     "organizations",
     "configurations",
@@ -53,7 +54,7 @@ function captureError(id, err) {
 export const bulkTools = [
     {
         name: "itglue_bulk_update",
-        description: "Update multiple resources of the same type in one call. JSON:API merge semantics — omitted attributes are left untouched. Up to 50 items per call. Returns separate succeeded[] and failed[] arrays so partial failures don't abort the batch.",
+        description: 'Update multiple resources of the same type in one call. JSON:API merge semantics — omitted attributes are left untouched. Up to 50 items per call. Returns separate succeeded[] and failed[] arrays so partial failures don\'t abort the batch. Destructive — requires confirm: "BULK_UPDATE".',
         inputSchema: {
             type: "object",
             properties: {
@@ -76,11 +77,13 @@ export const bulkTools = [
                         required: ["id", "attributes"],
                     },
                 },
+                ...confirmSchema("BULK_UPDATE"),
             },
-            required: ["resourceType", "items"],
+            required: ["resourceType", "items", "confirm"],
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
+            requireConfirm(args, "BULK_UPDATE");
             const resourceType = assertResourceType(args.resourceType);
             const items = args.items;
             if (!Array.isArray(items) || items.length === 0) {
@@ -120,7 +123,7 @@ export const bulkTools = [
     },
     {
         name: "itglue_bulk_delete",
-        description: "Delete multiple resources of the same type in one call. Up to 50 ids per call. Returns separate succeeded[] and failed[] arrays so partial failures don't abort the batch.",
+        description: 'Delete multiple resources of the same type in one call. Up to 50 ids per call. Returns separate succeeded[] and failed[] arrays so partial failures don\'t abort the batch. Destructive — requires confirm: "BULK_DELETE".',
         inputSchema: {
             type: "object",
             properties: {
@@ -136,11 +139,13 @@ export const bulkTools = [
                     items: { type: "string" },
                     description: "Up to 50 ids to delete.",
                 },
+                ...confirmSchema("BULK_DELETE"),
             },
-            required: ["resourceType", "ids"],
+            required: ["resourceType", "ids", "confirm"],
             additionalProperties: false,
         },
         handler: async (args, { client }) => {
+            requireConfirm(args, "BULK_DELETE");
             const resourceType = assertResourceType(args.resourceType);
             const idsRaw = args.ids;
             if (!Array.isArray(idsRaw) || idsRaw.length === 0) {

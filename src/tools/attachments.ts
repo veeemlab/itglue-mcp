@@ -1,8 +1,10 @@
 import { buildPagination } from "../client.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   type ToolDefinition,
@@ -61,7 +63,7 @@ export const attachmentTools: ToolDefinition[] = [
   {
     name: "itglue_delete_attachment",
     description:
-      "Delete an attachment from a parent resource. Both parentType+parentId AND the attachment id are required.",
+      'Delete an attachment from a parent resource. Destructive — requires confirm: "DELETE_ATTACHMENT".',
     inputSchema: {
       type: "object",
       properties: {
@@ -72,11 +74,13 @@ export const attachmentTools: ToolDefinition[] = [
         },
         parentId: { type: "string", description: "Parent resource id." },
         id: { type: "string", description: "Attachment id to delete." },
+        ...confirmSchema("DELETE_ATTACHMENT"),
       },
-      required: ["parentType", "parentId", "id"],
+      required: ["parentType", "parentId", "id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_ATTACHMENT");
       const parentType = assertParentType(args.parentType);
       const parentId = requireString(args, "parentId");
       const id = requireId(args);

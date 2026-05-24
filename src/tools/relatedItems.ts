@@ -1,8 +1,10 @@
 import { buildPagination } from "../client.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   toStrOrUndef,
@@ -131,7 +133,8 @@ export const relatedItemTools: ToolDefinition[] = [
   },
   {
     name: "itglue_delete_related_item",
-    description: "Remove a related-item link from a parent resource.",
+    description:
+      'Remove a related-item link from a parent resource. Destructive — requires confirm: "DELETE_RELATED_ITEM".',
     inputSchema: {
       type: "object",
       properties: {
@@ -142,11 +145,13 @@ export const relatedItemTools: ToolDefinition[] = [
         },
         parentId: { type: "string", description: "Parent resource id." },
         id: { type: "string", description: "Related-item id to delete." },
+        ...confirmSchema("DELETE_RELATED_ITEM"),
       },
-      required: ["parentType", "parentId", "id"],
+      required: ["parentType", "parentId", "id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_RELATED_ITEM");
       const parentType = assertParentType(args.parentType);
       const parentId = requireString(args, "parentId");
       const id = requireId(args);

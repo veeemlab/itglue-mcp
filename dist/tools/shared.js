@@ -79,3 +79,18 @@ export function requireString(args, key) {
 export function requireId(args, key = "id") {
     return requireString(args, key);
 }
+export function confirmSchema(expectedToken) {
+    return {
+        confirm: {
+            type: "string",
+            enum: [expectedToken],
+            description: `Required safety token. Pass "${expectedToken}" verbatim to acknowledge this destructive operation. Without it the call is refused.`,
+        },
+    };
+}
+export function requireConfirm(args, expectedToken) {
+    if (args.confirm !== expectedToken) {
+        throw new Error(`This operation is destructive and requires explicit acknowledgement. ` +
+            `Re-send the call with confirm: "${expectedToken}".`);
+    }
+}

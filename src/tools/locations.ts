@@ -4,9 +4,11 @@ import {
   mergeQuery,
 } from "../client.js";
 import {
+  confirmSchema,
   formatOptionsSchema,
   paginationSchema,
   pickPagination,
+  requireConfirm,
   requireId,
   requireString,
   toBoolOrUndef,
@@ -167,16 +169,19 @@ export const locationTools: ToolDefinition[] = [
   },
   {
     name: "itglue_delete_location",
-    description: "Delete a location by id.",
+    description:
+      'Delete a location by id. Destructive — requires confirm: "DELETE_LOCATION".',
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: "Location id." },
+        ...confirmSchema("DELETE_LOCATION"),
       },
-      required: ["id"],
+      required: ["id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "DELETE_LOCATION");
       const id = requireId(args);
       return client.delete(`/locations/${encodeURIComponent(id)}`);
     },
