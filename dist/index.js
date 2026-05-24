@@ -1,6 +1,14 @@
 #!/usr/bin/env node
+import { timingSafeEqual } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { buildServer } from "./server.js";
+function tokensMatch(presented, expected) {
+    const a = Buffer.from(presented);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length)
+        return false;
+    return timingSafeEqual(a, b);
+}
 async function main() {
     const apiKey = process.env.ITGLUE_API_KEY;
     const region = (process.env.ITGLUE_REGION ?? "us").toLowerCase();
@@ -16,6 +24,13 @@ async function main() {
     await server.connect(transport);
 }
 async function runHttp(apiKey, region) {
+    const httpToken = process.env.ITGLUE_HTTP_TOKEN;
+    if (!httpToken || httpToken.length < 16) {
+        console.error("[itglue-mcp] ITGLUE_TRANSPORT=http requires ITGLUE_HTTP_TOKEN " +
+            "(>= 16 chars). Aborting — refusing to expose /mcp without auth.");
+        process.exit(1);
+    }
+    const host = process.env.ITGLUE_HTTP_HOST ?? "127.0.0.1";
     const { StreamableHTTPServerTransport } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
     const http = await import("node:http");
     const server = buildServer({ apiKey: apiKey || "placeholder", region });
@@ -37,14 +52,24 @@ async function runHttp(apiKey, region) {
             return;
         }
         if (req.url.startsWith("/mcp")) {
+            const auth = req.headers["authorization"];
+            const presented = typeof auth === "string" && auth.startsWith("Bearer ")
+                ? auth.slice("Bearer ".length)
+                : "";
+            if (!presented || !tokensMatch(presented, httpToken)) {
+                res.statusCode = 401;
+                res.setHeader("WWW-Authenticate", 'Bearer realm="itglue-mcp"');
+                res.end();
+                return;
+            }
             void transport.handleRequest(req, res);
             return;
         }
         res.statusCode = 404;
         res.end();
     });
-    httpServer.listen(port, () => {
-        console.error(`[itglue-mcp] HTTP transport listening on :${port}`);
+    httpServer.listen(port, host, () => {
+        console.error(`[itglue-mcp] HTTP transport listening on ${host}:${port}`);
     });
 }
 main().catch((err) => {
