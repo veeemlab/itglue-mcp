@@ -3,17 +3,30 @@ import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextpro
 import { ITGlueClient } from "./client.js";
 import { applyFormat, pickFormatOptions } from "./format.js";
 import { allTools, errorResult, textResult, } from "./tools/index.js";
+const MUTATING_NAME_PATTERN = /^itglue_(create|update|delete|bulk|publish)_/;
+export function isMutatingTool(name) {
+    return MUTATING_NAME_PATTERN.test(name);
+}
+export function selectTools(readOnly) {
+    return readOnly ? allTools.filter((t) => !isMutatingTool(t.name)) : allTools;
+}
 export function buildServer(opts) {
     const client = new ITGlueClient({ apiKey: opts.apiKey, region: opts.region });
+    const readOnly = opts.readOnly ?? false;
+    const enabledTools = selectTools(readOnly);
     const toolMap = new Map();
-    for (const t of allTools)
+    for (const t of enabledTools)
         toolMap.set(t.name, t);
+    if (readOnly) {
+        const skipped = allTools.length - enabledTools.length;
+        console.error(`[itglue-mcp] read-only mode: exposing ${enabledTools.length} tools, skipping ${skipped} mutating tools`);
+    }
     const server = new Server({
         name: opts.name ?? "itglue-mcp",
         version: opts.version ?? "0.1.0",
     }, { capabilities: { tools: {} } });
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
-        tools: allTools.map((t) => ({
+        tools: enabledTools.map((t) => ({
             name: t.name,
             description: t.description,
             inputSchema: t.inputSchema,

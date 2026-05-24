@@ -12,18 +12,19 @@ function tokensMatch(presented, expected) {
 async function main() {
     const apiKey = process.env.ITGLUE_API_KEY;
     const region = (process.env.ITGLUE_REGION ?? "us").toLowerCase();
+    const readOnly = process.env.ITGLUE_READ_ONLY === "true";
     if (!apiKey) {
         console.error("[itglue-mcp] ITGLUE_API_KEY is not set. The server will start but every tool call will fail.");
     }
     if (process.env.ITGLUE_TRANSPORT === "http") {
-        await runHttp(apiKey ?? "", region);
+        await runHttp(apiKey ?? "", region, readOnly);
         return;
     }
-    const server = buildServer({ apiKey: apiKey ?? "placeholder", region });
+    const server = buildServer({ apiKey: apiKey ?? "placeholder", region, readOnly });
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }
-async function runHttp(apiKey, region) {
+async function runHttp(apiKey, region, readOnly) {
     const httpToken = process.env.ITGLUE_HTTP_TOKEN;
     if (!httpToken || httpToken.length < 16) {
         console.error("[itglue-mcp] ITGLUE_TRANSPORT=http requires ITGLUE_HTTP_TOKEN " +
@@ -33,7 +34,7 @@ async function runHttp(apiKey, region) {
     const host = process.env.ITGLUE_HTTP_HOST ?? "127.0.0.1";
     const { StreamableHTTPServerTransport } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
     const http = await import("node:http");
-    const server = buildServer({ apiKey: apiKey || "placeholder", region });
+    const server = buildServer({ apiKey: apiKey || "placeholder", region, readOnly });
     const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
     });

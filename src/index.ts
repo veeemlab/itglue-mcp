@@ -15,6 +15,7 @@ function tokensMatch(presented: string, expected: string): boolean {
 async function main() {
   const apiKey = process.env.ITGLUE_API_KEY;
   const region = (process.env.ITGLUE_REGION ?? "us").toLowerCase();
+  const readOnly = process.env.ITGLUE_READ_ONLY === "true";
 
   if (!apiKey) {
     console.error(
@@ -23,16 +24,16 @@ async function main() {
   }
 
   if (process.env.ITGLUE_TRANSPORT === "http") {
-    await runHttp(apiKey ?? "", region);
+    await runHttp(apiKey ?? "", region, readOnly);
     return;
   }
 
-  const server = buildServer({ apiKey: apiKey ?? "placeholder", region });
+  const server = buildServer({ apiKey: apiKey ?? "placeholder", region, readOnly });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
 
-async function runHttp(apiKey: string, region: string) {
+async function runHttp(apiKey: string, region: string, readOnly: boolean) {
   const httpToken = process.env.ITGLUE_HTTP_TOKEN;
   if (!httpToken || httpToken.length < 16) {
     console.error(
@@ -48,7 +49,7 @@ async function runHttp(apiKey: string, region: string) {
   );
   const http = await import("node:http");
 
-  const server = buildServer({ apiKey: apiKey || "placeholder", region });
+  const server = buildServer({ apiKey: apiKey || "placeholder", region, readOnly });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => crypto.randomUUID(),
   });
