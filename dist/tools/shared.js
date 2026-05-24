@@ -1,3 +1,4 @@
+import { redactSecrets } from "../redact.js";
 export { formatOptionsSchema } from "../format.js";
 export function textResult(payload) {
     const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
@@ -11,7 +12,7 @@ export function errorResult(err) {
         ? err.body
         : undefined;
     const payload = body
-        ? { error: message, details: body }
+        ? { error: message, details: redactSecrets(body) }
         : { error: message };
     return {
         isError: true,

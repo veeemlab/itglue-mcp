@@ -1,4 +1,5 @@
 import type { ITGlueClient } from "../client.js";
+import { redactSecrets } from "../redact.js";
 
 export { formatOptionsSchema } from "../format.js";
 
@@ -32,7 +33,7 @@ export function errorResult(err: unknown) {
       ? (err as { body?: unknown }).body
       : undefined;
   const payload = body
-    ? { error: message, details: body }
+    ? { error: message, details: redactSecrets(body) }
     : { error: message };
   return {
     isError: true,
