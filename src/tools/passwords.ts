@@ -123,7 +123,7 @@ export const passwordTools: ToolDefinition[] = [
   {
     name: "itglue_create_password",
     description:
-      "Create a password entry. organizationId, name and password are required; username/url/notes are common optional fields.",
+      'Create a password entry. organizationId, name and password are required; username/url/notes are common optional fields. Sensitive write — requires confirm: "CREATE_PASSWORD".',
     inputSchema: {
       type: "object",
       properties: {
@@ -146,11 +146,13 @@ export const passwordTools: ToolDefinition[] = [
         },
         otpEnabled: { type: "boolean" },
         otpSecret: { type: "string" },
+        ...confirmSchema("CREATE_PASSWORD"),
       },
-      required: ["organizationId", "name", "password"],
+      required: ["organizationId", "name", "password", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "CREATE_PASSWORD");
       requireString(args, "organizationId");
       requireString(args, "name");
       requireString(args, "password");
@@ -160,7 +162,8 @@ export const passwordTools: ToolDefinition[] = [
   },
   {
     name: "itglue_update_password",
-    description: "Update a password entry by id.",
+    description:
+      'Update a password entry by id. Sensitive write — requires confirm: "UPDATE_PASSWORD".',
     inputSchema: {
       type: "object",
       properties: {
@@ -177,13 +180,15 @@ export const passwordTools: ToolDefinition[] = [
         passwordType: { type: "string" },
         otpEnabled: { type: "boolean" },
         otpSecret: { type: "string" },
+        ...confirmSchema("UPDATE_PASSWORD"),
       },
-      required: ["id"],
+      required: ["id", "confirm"],
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
+      requireConfirm(args, "UPDATE_PASSWORD");
       const id = requireId(args);
-      const { id: _omit, ...rest } = args;
+      const { id: _omit, confirm: _confirm, ...rest } = args;
       const body = passwordResource(rest, id);
       return client.patch(`/passwords/${encodeURIComponent(id)}`, body);
     },

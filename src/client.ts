@@ -1,4 +1,5 @@
 import { LruCache, resourceFromPath, ttlForResource } from "./cache.js";
+import { redactErrorString, redactSecrets } from "./redact.js";
 
 const REGION_HOSTS: Record<string, string> = {
   us: "https://api.itglue.com",
@@ -172,8 +173,9 @@ export class ITGlueClient {
         attempt++;
         continue;
       }
-      const message = extractErrorMessage(parsed, response.status, response.statusText);
-      throw new ITGlueApiError(message, response.status, parsed);
+      const redactedBody = redactSecrets(parsed);
+      const message = extractErrorMessage(redactedBody, response.status, response.statusText);
+      throw new ITGlueApiError(message, response.status, redactedBody);
     }
   }
 
@@ -222,8 +224,8 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
     if (Array.isArray(errs) && errs.length > 0) {
       const parts = errs
         .map((e) => {
-          const title = typeof e.title === "string" ? e.title : undefined;
-          const detail = typeof e.detail === "string" ? e.detail : undefined;
+          const title = typeof e.title === "string" ? redactErrorString(e.title) : undefined;
+          const detail = typeof e.detail === "string" ? redactErrorString(e.detail) : undefined;
           return [title, detail].filter(Boolean).join(": ");
         })
         .filter(Boolean);

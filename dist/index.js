@@ -2,6 +2,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { buildServer } from "./server.js";
+import { toBoolOrUndef } from "./tools/shared.js";
 function tokensMatch(presented, expected) {
     const a = Buffer.from(presented);
     const b = Buffer.from(expected);
@@ -12,7 +13,7 @@ function tokensMatch(presented, expected) {
 async function main() {
     const apiKey = process.env.ITGLUE_API_KEY;
     const region = (process.env.ITGLUE_REGION ?? "us").toLowerCase();
-    const readOnly = process.env.ITGLUE_READ_ONLY === "true";
+    const readOnly = toBoolOrUndef(process.env.ITGLUE_READ_ONLY) === true;
     if (!apiKey) {
         console.error("[itglue-mcp] ITGLUE_API_KEY is not set. The server will start but every tool call will fail.");
     }

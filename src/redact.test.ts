@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { redactSecrets } from "./redact.js";
+import { redactErrorString, redactSecrets } from "./redact.js";
 
 describe("redactSecrets", () => {
   it("redacts top-level secret keys", () => {
@@ -63,5 +63,42 @@ describe("redactSecrets", () => {
     expect(redactSecrets(42)).toBe(42);
     expect(redactSecrets(null)).toBeNull();
     expect(redactSecrets(undefined)).toBeUndefined();
+  });
+});
+
+describe("redactErrorString", () => {
+  it("masks free-text password value after the label", () => {
+    expect(redactErrorString("password hunter2 is invalid")).toBe(
+      "password [REDACTED] is invalid",
+    );
+  });
+
+  it("masks token value with colon separator", () => {
+    expect(redactErrorString("token: tok-456 expired")).toBe("token: [REDACTED] expired");
+  });
+
+  it("masks api_key with equals separator", () => {
+    expect(redactErrorString("api_key=sk-abc123")).toBe("api_key=[REDACTED]");
+  });
+
+  it("masks quoted secret values", () => {
+    expect(redactErrorString(`password "hunter2" is invalid`)).toBe(
+      `password "[REDACTED]" is invalid`,
+    );
+    expect(redactErrorString(`token 'tok-1'`)).toBe(`token '[REDACTED]'`);
+  });
+
+  it("does not touch label alone with no following value", () => {
+    expect(redactErrorString("Invalid password")).toBe("Invalid password");
+  });
+
+  it("does not match inside larger words", () => {
+    expect(redactErrorString("passwords are required")).toBe("passwords are required");
+  });
+
+  it("masks multiple secrets in same string", () => {
+    expect(redactErrorString("password p1 and token t1")).toBe(
+      "password [REDACTED] and token [REDACTED]",
+    );
   });
 });

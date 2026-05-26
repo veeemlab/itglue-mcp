@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { buildServer } from "./server.js";
+import { toBoolOrUndef } from "./tools/shared.js";
 
 function tokensMatch(presented: string, expected: string): boolean {
   const a = Buffer.from(presented);
@@ -15,7 +16,7 @@ function tokensMatch(presented: string, expected: string): boolean {
 async function main() {
   const apiKey = process.env.ITGLUE_API_KEY;
   const region = (process.env.ITGLUE_REGION ?? "us").toLowerCase();
-  const readOnly = process.env.ITGLUE_READ_ONLY === "true";
+  const readOnly = toBoolOrUndef(process.env.ITGLUE_READ_ONLY) === true;
 
   if (!apiKey) {
     console.error(
