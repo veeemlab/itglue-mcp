@@ -52,9 +52,35 @@ describe("redactSecrets", () => {
     });
   });
 
-  it("does not touch values whose key is innocent even if value contains the word password", () => {
+  it("does not touch a label-only mention of a secret name", () => {
     expect(redactSecrets({ detail: "Invalid password" })).toEqual({
       detail: "Invalid password",
+    });
+  });
+
+  it("redacts secret values embedded in error-text strings (detail/message/title/error)", () => {
+    expect(
+      redactSecrets({
+        errors: [
+          { title: "Validation failed", detail: "password hunter2 is invalid and token abc123 expired" },
+        ],
+      }),
+    ).toEqual({
+      errors: [
+        {
+          title: "Validation failed",
+          detail: "password [REDACTED] is invalid and token [REDACTED] expired",
+        },
+      ],
+    });
+  });
+
+  it("applies free-text redaction to top-level message and error fields", () => {
+    expect(
+      redactSecrets({ message: "api_key=sk-abc123 invalid", error: "token tok-1 expired" }),
+    ).toEqual({
+      message: "api_key=[REDACTED] invalid",
+      error: "token [REDACTED] expired",
     });
   });
 

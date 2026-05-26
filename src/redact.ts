@@ -1,5 +1,6 @@
 const SECRET_KEY_PATTERN = /password|passwd|secret|token|api[_-]?key|otp|private[_-]?key|x[_-]?api[_-]?key/i;
 const SECRET_VALUE_IN_TEXT = /\b(password|passwd|secret|token|api[_-]?key|otp|private[_-]?key|x[_-]?api[_-]?key)\b([\s:=]*)("[^"]*"|'[^']*'|\S+)/gi;
+const ERROR_TEXT_KEYS = new Set(["detail", "details", "message", "title", "error", "errors", "summary", "description"]);
 const REDACTED = "[REDACTED]";
 const MAX_DEPTH = 10;
 
@@ -38,6 +39,8 @@ export function redactSecrets(value: unknown, depth = 0): unknown {
       } else {
         out[k] = v;
       }
+    } else if (typeof v === "string" && ERROR_TEXT_KEYS.has(k.toLowerCase())) {
+      out[k] = redactErrorString(v);
     } else {
       out[k] = redactSecrets(v, depth + 1);
     }
