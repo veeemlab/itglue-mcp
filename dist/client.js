@@ -11,7 +11,7 @@ const DEFAULT_CACHE_MAX_ENTRIES = 500;
 const IDEMPOTENT_METHODS = new Set(["GET", "DELETE", "HEAD", "OPTIONS"]);
 const ALWAYS_RETRYABLE_STATUSES = new Set([429]);
 const IDEMPOTENT_RETRYABLE_STATUSES = new Set([408, 500, 502, 503, 504]);
-function isRetryable(method, status) {
+export function isRetryable(method, status) {
     if (ALWAYS_RETRYABLE_STATUSES.has(status))
         return true;
     return IDEMPOTENT_METHODS.has(method) && IDEMPOTENT_RETRYABLE_STATUSES.has(status);

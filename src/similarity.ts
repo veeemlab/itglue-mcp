@@ -3,6 +3,7 @@ export type Confidence = "Update" | "ManualReview" | "CreateNew";
 export function normalize(value: string): string {
   return value
     .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
