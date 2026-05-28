@@ -3,7 +3,7 @@ import {
   buildPagination,
   mergeQuery,
 } from "../client.js";
-import { searchWithNameFallback } from "../searchFallback.js";
+import { fuzzyFallbackScan, hasAnyHits, searchWithNameFallback } from "../searchFallback.js";
 import {
   formatOptionsSchema,
   paginationSchema,
@@ -41,16 +41,30 @@ export const organizationTools: ToolDefinition[] = [
     },
     handler: async (args, { client }) => {
       const inputName = toStrOrUndef(args.name);
-      return searchWithNameFallback(inputName, async (variant) => {
-        const filters = buildFilters({
-          name: variant,
-          organization_type_id: toStrOrUndef(args.organizationTypeId),
-          organization_status_id: toStrOrUndef(args.organizationStatusId),
-          psa_integration_type: toStrOrUndef(args.psaIntegrationType),
-        });
-        const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-        return client.get("/organizations", query);
+      const otherFilters = {
+        organization_type_id: toStrOrUndef(args.organizationTypeId),
+        organization_status_id: toStrOrUndef(args.organizationStatusId),
+        psa_integration_type: toStrOrUndef(args.psaIntegrationType),
+      };
+      const pagination = buildPagination(pickPagination(args));
+      const result = await searchWithNameFallback(inputName, async (variant) => {
+        const filters = buildFilters({ name: variant, ...otherFilters });
+        return client.get("/organizations", mergeQuery(filters, pagination));
       });
+      if (inputName && !hasAnyHits(result)) {
+        return fuzzyFallbackScan({
+          input: inputName,
+          fetchUnfiltered: () => {
+            const filters = buildFilters(otherFilters);
+            return client.get("/organizations", mergeQuery(filters, pagination));
+          },
+          getName: (r) => {
+            const name = r.attributes?.name;
+            return typeof name === "string" ? name : "";
+          },
+        });
+      }
+      return result;
     },
   },
   {

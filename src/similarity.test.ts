@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyConfidence, normalize, similarity } from "./similarity.js";
+import {
+  classifyConfidence,
+  normalize,
+  similarity,
+  similarityTokenSet,
+} from "./similarity.js";
 
 describe("normalize", () => {
   it("strips diacritics, lowercases, collapses whitespace", () => {
@@ -29,6 +34,37 @@ describe("similarity (Jaro-Winkler over normalized strings)", () => {
   it("handles empty strings safely", () => {
     expect(similarity("", "")).toBe(1);
     expect(similarity("", "x")).toBe(0);
+  });
+});
+
+describe("similarityTokenSet", () => {
+  it("matches single token inside multi-word candidate at 1.0", () => {
+    expect(similarityTokenSet("Kaiser", "Zahnarztpraxis Dr. Peter Kaiser")).toBe(1);
+  });
+
+  it("matches across token order", () => {
+    expect(
+      similarityTokenSet("Peter Kaiser", "Zahnarztpraxis Dr. Peter Kaiser"),
+    ).toBeGreaterThanOrEqual(0.95);
+  });
+
+  it("handles diacritic equivalence inside tokens", () => {
+    expect(similarityTokenSet("Schafer", "Müller Schäfer GmbH")).toBe(1);
+  });
+
+  it("returns under 0.7 when no token aligns", () => {
+    expect(similarityTokenSet("Kaiser", "Globex Industries")).toBeLessThan(0.7);
+  });
+
+  it("never lower than whole-string jaro-winkler", () => {
+    const whole = similarity("Acme Corp", "Acme Corporation");
+    const set = similarityTokenSet("Acme Corp", "Acme Corporation");
+    expect(set).toBeGreaterThanOrEqual(whole);
+  });
+
+  it("handles empty inputs", () => {
+    expect(similarityTokenSet("", "")).toBe(1);
+    expect(similarityTokenSet("", "x")).toBe(0);
   });
 });
 

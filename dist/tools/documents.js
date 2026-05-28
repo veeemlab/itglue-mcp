@@ -1,5 +1,5 @@
 import { buildFilters, buildPagination, mergeQuery, } from "../client.js";
-import { searchWithNameFallback } from "../searchFallback.js";
+import { fuzzyFallbackScan, hasAnyHits, searchWithNameFallback } from "../searchFallback.js";
 import { confirmSchema, formatOptionsSchema, paginationSchema, pickPagination, requireConfirm, requireId, requireString, toBoolOrUndef, toIntOrUndef, toStrOrUndef, } from "./shared.js";
 function documentResource(args, id) {
     const attributes = {};
@@ -66,15 +66,29 @@ export const documentTools = [
         },
         handler: async (args, { client }) => {
             const inputName = toStrOrUndef(args.name);
-            return searchWithNameFallback(inputName, async (variant) => {
-                const filters = buildFilters({
-                    name: variant,
-                    organization_id: toStrOrUndef(args.organizationId),
-                    document_folder_id: toStrOrUndef(args.documentFolderId),
-                });
-                const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-                return client.get("/documents", query);
+            const otherFilters = {
+                organization_id: toStrOrUndef(args.organizationId),
+                document_folder_id: toStrOrUndef(args.documentFolderId),
+            };
+            const pagination = buildPagination(pickPagination(args));
+            const result = await searchWithNameFallback(inputName, async (variant) => {
+                const filters = buildFilters({ name: variant, ...otherFilters });
+                return client.get("/documents", mergeQuery(filters, pagination));
             });
+            if (inputName && !hasAnyHits(result)) {
+                return fuzzyFallbackScan({
+                    input: inputName,
+                    fetchUnfiltered: () => {
+                        const filters = buildFilters(otherFilters);
+                        return client.get("/documents", mergeQuery(filters, pagination));
+                    },
+                    getName: (r) => {
+                        const name = r.attributes?.name;
+                        return typeof name === "string" ? name : "";
+                    },
+                });
+            }
+            return result;
         },
     },
     {

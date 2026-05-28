@@ -42,7 +42,8 @@ function flexibleAssetResource(args: Record<string, unknown>, id?: string) {
 export const flexibleAssetTools: ToolDefinition[] = [
   {
     name: "itglue_list_flexible_asset_types",
-    description: "List all flexible asset types.",
+    description:
+      "List flexible asset type definitions (schemas) — the catalog of custom IT documentation asset categories like 'Active Directory', 'Backup', 'SSL Certificate', 'Email Provider', 'LAN Network', 'Licensing'. Call this FIRST to learn what flexible asset categories exist in this IT Glue tenant before searching or creating flexible assets. Returns type ids used as flexibleAssetTypeId in other tools. Synonyms: list FA types, list flexible asset schemas, list flexible asset categories, list custom asset types, list IT Glue asset definitions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -65,7 +66,7 @@ export const flexibleAssetTools: ToolDefinition[] = [
   {
     name: "itglue_list_flexible_asset_fields",
     description:
-      "List fields for a flexible asset type. Call this before create/update to learn the required trait keys.",
+      "List the schema (custom field definitions) for a specific flexible asset type. Returns the trait keys, their kinds (Text, Number, Date, Select, etc.), and which are required. Call AFTER itglue_list_flexible_asset_types and BEFORE itglue_create_flexible_asset / itglue_update_flexible_asset so you know what traits to populate. Synonyms: list FA fields, list flexible asset schema, show flexible asset type fields, get trait definitions, describe flexible asset type.",
     inputSchema: {
       type: "object",
       properties: {

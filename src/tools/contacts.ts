@@ -3,7 +3,7 @@ import {
   buildPagination,
   mergeQuery,
 } from "../client.js";
-import { searchWithNameFallback } from "../searchFallback.js";
+import { fuzzyFallbackScan, hasAnyHits, searchWithNameFallback } from "../searchFallback.js";
 import {
   confirmSchema,
   formatOptionsSchema,
@@ -103,19 +103,39 @@ export const contactTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: async (args, { client }) => {
-      const inputName = toStrOrUndef(args.firstName);
-      return searchWithNameFallback(inputName, async (variant) => {
-        const filters = buildFilters({
-          first_name: variant,
-          last_name: toStrOrUndef(args.lastName),
-          organization_id: toStrOrUndef(args.organizationId),
-          contact_type_id: toStrOrUndef(args.contactTypeId),
-          important: toBoolOrUndef(args.important),
-          primary_email: toStrOrUndef(args.primaryEmail),
-        });
-        const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-        return client.get("/contacts", query);
+      const inputFirst = toStrOrUndef(args.firstName);
+      const inputLast = toStrOrUndef(args.lastName);
+      const fuzzyTarget = [inputFirst, inputLast].filter(Boolean).join(" ").trim() || undefined;
+      const otherFilters = {
+        last_name: inputLast,
+        organization_id: toStrOrUndef(args.organizationId),
+        contact_type_id: toStrOrUndef(args.contactTypeId),
+        important: toBoolOrUndef(args.important),
+        primary_email: toStrOrUndef(args.primaryEmail),
+      };
+      const pagination = buildPagination(pickPagination(args));
+      const result = await searchWithNameFallback(inputFirst, async (variant) => {
+        const filters = buildFilters({ first_name: variant, ...otherFilters });
+        return client.get("/contacts", mergeQuery(filters, pagination));
       });
+      if (fuzzyTarget && !hasAnyHits(result)) {
+        const fuzzyFilters = { ...otherFilters, last_name: undefined };
+        return fuzzyFallbackScan({
+          input: fuzzyTarget,
+          fetchUnfiltered: () => {
+            const filters = buildFilters(fuzzyFilters);
+            return client.get("/contacts", mergeQuery(filters, pagination));
+          },
+          getName: (r) => {
+            const first = r.attributes?.["first-name"];
+            const last = r.attributes?.["last-name"];
+            const a = typeof first === "string" ? first : "";
+            const b = typeof last === "string" ? last : "";
+            return `${a} ${b}`.trim();
+          },
+        });
+      }
+      return result;
     },
   },
   {

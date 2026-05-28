@@ -3,7 +3,7 @@ import {
   buildPagination,
   mergeQuery,
 } from "../client.js";
-import { searchWithNameFallback } from "../searchFallback.js";
+import { fuzzyFallbackScan, hasAnyHits, searchWithNameFallback } from "../searchFallback.js";
 import {
   confirmSchema,
   formatOptionsSchema,
@@ -88,20 +88,34 @@ export const configurationTools: ToolDefinition[] = [
     },
     handler: async (args, { client }) => {
       const inputName = toStrOrUndef(args.name);
-      return searchWithNameFallback(inputName, async (variant) => {
-        const filters = buildFilters({
-          name: variant,
-          organization_id: toStrOrUndef(args.organizationId),
-          configuration_type_id: toStrOrUndef(args.configurationTypeId),
-          configuration_status_id: toStrOrUndef(args.configurationStatusId),
-          serial_number: toStrOrUndef(args.serialNumber),
-          asset_tag: toStrOrUndef(args.assetTag),
-          rmm_id: toStrOrUndef(args.rmmId),
-          archived: toBoolOrUndef(args.archived),
-        });
-        const query = mergeQuery(filters, buildPagination(pickPagination(args)));
-        return client.get("/configurations", query);
+      const otherFilters = {
+        organization_id: toStrOrUndef(args.organizationId),
+        configuration_type_id: toStrOrUndef(args.configurationTypeId),
+        configuration_status_id: toStrOrUndef(args.configurationStatusId),
+        serial_number: toStrOrUndef(args.serialNumber),
+        asset_tag: toStrOrUndef(args.assetTag),
+        rmm_id: toStrOrUndef(args.rmmId),
+        archived: toBoolOrUndef(args.archived),
+      };
+      const pagination = buildPagination(pickPagination(args));
+      const result = await searchWithNameFallback(inputName, async (variant) => {
+        const filters = buildFilters({ name: variant, ...otherFilters });
+        return client.get("/configurations", mergeQuery(filters, pagination));
       });
+      if (inputName && !hasAnyHits(result)) {
+        return fuzzyFallbackScan({
+          input: inputName,
+          fetchUnfiltered: () => {
+            const filters = buildFilters(otherFilters);
+            return client.get("/configurations", mergeQuery(filters, pagination));
+          },
+          getName: (r) => {
+            const name = r.attributes?.name;
+            return typeof name === "string" ? name : "";
+          },
+        });
+      }
+      return result;
     },
   },
   {
@@ -224,7 +238,8 @@ export const configurationTools: ToolDefinition[] = [
   },
   {
     name: "itglue_list_configuration_types",
-    description: "List all configuration types (e.g. Laptop, Server).",
+    description:
+      "List configuration type definitions — IT Glue's catalog of hardware/asset kinds like 'Laptop', 'Server', 'Workstation', 'Firewall', 'Switch', 'Printer', 'Mobile Device', 'Virtual Machine'. Returns type ids used as configurationTypeId when filtering search_configurations or creating new configurations. Synonyms: list config types, list device types, list asset types, list hardware categories.",
     inputSchema: {
       type: "object",
       properties: {
@@ -244,7 +259,8 @@ export const configurationTools: ToolDefinition[] = [
   },
   {
     name: "itglue_list_configuration_statuses",
-    description: "List all configuration statuses (e.g. Active, Inactive).",
+    description:
+      "List configuration status definitions — IT Glue's lifecycle states like 'Active', 'Inactive', 'In Service', 'Decommissioned', 'In Stock', 'Stolen', 'Lost'. Returns status ids used as configurationStatusId when filtering search_configurations or setting status on create/update. Synonyms: list config statuses, list asset statuses, list lifecycle states.",
     inputSchema: {
       type: "object",
       properties: {

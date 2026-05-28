@@ -199,7 +199,7 @@ export const passwordTools = [
     },
     {
         name: "itglue_list_password_categories",
-        description: "List all password categories.",
+        description: "List password category definitions — IT Glue's groupings for credential records like 'Local Admin', 'Domain Admin', 'Service Account', 'Vendor', 'Application', 'Email', 'Wi-Fi', 'VPN'. Returns category ids used as passwordCategoryId when filtering search_passwords or creating new password entries. Synonyms: list credential categories, list password types, list account categories.",
         inputSchema: {
             type: "object",
             properties: {

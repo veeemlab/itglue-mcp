@@ -65,6 +65,25 @@ export function similarity(a: string, b: string): number {
   return jaroWinkler(na, nb);
 }
 
+export function similarityTokenSet(a: string, b: string): number {
+  const na = normalize(a);
+  const nb = normalize(b);
+  if (!na && !nb) return 1;
+  if (!na || !nb) return 0;
+  const aTokens = na.split(" ").filter((t) => t.length > 0);
+  const bTokens = nb.split(" ").filter((t) => t.length > 0);
+  if (aTokens.length === 0 || bTokens.length === 0) return 0;
+  const whole = jaroWinkler(na, nb);
+  let bestPair = 0;
+  for (const at of aTokens) {
+    for (const bt of bTokens) {
+      const s = jaroWinkler(at, bt);
+      if (s > bestPair) bestPair = s;
+    }
+  }
+  return Math.max(whole, bestPair);
+}
+
 export function classifyConfidence(score: number): Confidence {
   if (score >= 0.95) return "Update";
   if (score >= 0.8) return "ManualReview";
